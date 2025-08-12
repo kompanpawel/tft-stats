@@ -1,8 +1,8 @@
 // src/app/services/riot-api.service.ts
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { forkJoin, Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import {Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {delay, filter, forkJoin, from, mergeMap, Observable, of, switchMap, take, timer, toArray, zip} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
 
 // Interfejsy danych dla lepszej organizacji i bezpieczeństwa
 export interface PlayerRank {
@@ -15,6 +15,7 @@ export interface PlayerRank {
   rankScore?: number;
   error?: boolean;
   message?: string;
+  positions?: string[];
 }
 
 interface RiotPlayerConfig {
@@ -28,7 +29,7 @@ interface RiotPlayerConfig {
 export class RiotApiService {
 
   // --- Konfiguracja ---
-  private readonly apiKey = 'RGAPI-5a483049-ebb8-495e-b72c-b34313cce4eb'; // <-- Wstaw swój klucz API
+  private readonly apiKey = 'RGAPI-f2499bc6-85e7-435b-9be9-866841d05e16'; // <-- Wstaw swój klucz API
   private readonly serverConfig = {
     platform: 'euw1',
     region: 'europe'
@@ -62,6 +63,7 @@ export class RiotApiService {
       );
     }
 
+
     const requests = this.riotIds.map(player => this.fetchPlayerRank(player));
     return forkJoin(requests).pipe(
       map(players => {
@@ -78,8 +80,13 @@ export class RiotApiService {
   private fetchPlayerRank(player: RiotPlayerConfig): Observable<PlayerRank> {
     const [gameName, tagLine] = player.name.split('#');
     const leagueUrl = `https://${this.serverConfig.platform}.api.riotgames.com/tft/league/v1/by-puuid/${player.puuid}?api_key=${this.apiKey}`;
-
-    return this.http.get<any[]>(leagueUrl).pipe(
+    const playerPositions$ = this.fetchPlayerMatches(player.puuid).pipe(
+      mergeMap(matchIds => from(matchIds)),
+      mergeMap(matchId => this.fetchPlayerPositionInMatch(matchId, player.puuid)),
+      filter(details => details !== ''),
+      toArray(),
+    )
+    const playerRankData$ = this.http.get<any[]>(leagueUrl).pipe(
       map(leagueData => {
         const rankedTftEntry = leagueData.find(entry => entry.queueType === 'RANKED_TFT');
         if (rankedTftEntry) {
@@ -108,6 +115,39 @@ export class RiotApiService {
           error: true,
           message: error.statusText || 'Unknown error'
         });
+      })
+    );
+
+    return zip(playerPositions$, playerRankData$).pipe(
+      map(([positions, data]) => ({
+        positions, ...data
+      }))
+    )
+  }
+
+  private fetchPlayerMatches (puuid: string): Observable<string[]> {
+    const requestLimit = 3;
+    const totalRequests = 4;
+
+    return timer(0, 1000).pipe(
+      take(totalRequests),
+      switchMap(index => {
+        const start = index * requestLimit;
+        const url = `https://europe.api.riotgames.com/tft/match/v1/matches/by-puuid/${puuid}/ids?start=${start}&count=${requestLimit}&api_key=${this.apiKey}`
+        return this.http.get<any[]>(url);
+      }
+    ));
+  }
+
+  private fetchPlayerPositionInMatch(matchId: string, playerPuuid: string): Observable<string> {
+    const url = `https://europe.api.riotgames.com/tft/match/v1/matches/${matchId}?api_key=${this.apiKey}`
+    return this.http.get(url).pipe(
+      map((matchData: any) => {
+        const isMatchTypeStandard = matchData.info.tft_game_type === 'standard';
+        if (isMatchTypeStandard) {
+          const playerMatchData = matchData.info.participants.find((entry: any) => entry.puuid === playerPuuid);
+          return playerMatchData.placement;
+        } else return '';
       })
     );
   }

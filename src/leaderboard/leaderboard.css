@@ -6,3 +6,37 @@
 .fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+.position {
+  padding: 4px 12px;
+  margin: 0 2px
+}
+
+.gold, .silver, .bronze, .brown, .normal {
+  border: 1px solid;
+  border-radius: 2px;
+}
+
+.gold {
+  border-color: #B3883C;
+  background-color: #916823;
+}
+
+.silver {
+  border-color: #B8B8B8;
+  background-color: #8A8A8A;
+}
+
+.bronze {
+  border-color: #967D64;
+  background-color: #765D46;
+}
+
+.brown {
+  border-color: #5B4725;
+  background-color: #473415;
+}
+
+.normal {
+  border-color: white;
+}

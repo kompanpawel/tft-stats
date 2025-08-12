@@ -31,6 +31,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     'DIAMOND': 'text-blue-400', 'MASTER': 'text-purple-400', 'GRANDMASTER': 'text-red-500',
     'CHALLENGER': 'text-amber-300', 'UNRANKED': 'text-gray-500'
   };
+
+  private readonly positionColors: any = {
+    '1': 'gold', '2': 'silver', '3': 'bronze', '4': 'brown', '5': 'normal', '6': 'normal', '7': 'normal', '8': 'normal'
+  }
   private readonly tierValues: any = { 'UNRANKED': 0, 'IRON': 1, 'BRONZE': 2, 'SILVER': 3, 'GOLD': 4, 'PLATINUM': 5, 'EMERALD': 6, 'DIAMOND': 7, 'MASTER': 8, 'GRANDMASTER': 9, 'CHALLENGER': 10 };
 
   constructor(private riotApiService: RiotApiService) { }
@@ -76,6 +80,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   public getTierColorClass(tier: string | undefined): string {
     const safeTier = (tier || 'UNRANKED').toUpperCase();
     return this.rankColors[safeTier] || 'text-gray-500';
+  }
+
+  public getPositionColorClass(position: string): string {
+    return this.positionColors[position];
   }
 
   public getDisplayRank(player: PlayerRank): string {
