@@ -29,7 +29,7 @@ interface RiotPlayerConfig {
 export class RiotApiService {
 
   // --- Konfiguracja ---
-  private readonly apiKey = 'RGAPI-f2499bc6-85e7-435b-9be9-866841d05e16'; // <-- Wstaw swój klucz API
+  private readonly apiKey = 'RGAPI-6992c2b0-d6bc-4878-bf28-f158c793ac62'; // <-- Wstaw swój klucz API
   private readonly serverConfig = {
     platform: 'euw1',
     region: 'europe'
@@ -83,8 +83,16 @@ export class RiotApiService {
     const playerPositions$ = this.fetchPlayerMatches(player.puuid).pipe(
       mergeMap(matchIds => from(matchIds)),
       mergeMap(matchId => this.fetchPlayerPositionInMatch(matchId, player.puuid)),
-      filter(details => details !== ''),
+      filter(details => details.position !== ''),
       toArray(),
+      map((array) => {
+        const sortedArray = array.sort((a, b) => b.date - a.date)
+        let newArray: string[] = [];
+        sortedArray.forEach((element) => {
+          newArray.push(element.position)
+        })
+        return newArray
+      })
     )
     const playerRankData$ = this.http.get<any[]>(leagueUrl).pipe(
       map(leagueData => {
@@ -139,15 +147,16 @@ export class RiotApiService {
     ));
   }
 
-  private fetchPlayerPositionInMatch(matchId: string, playerPuuid: string): Observable<string> {
+  private fetchPlayerPositionInMatch(matchId: string, playerPuuid: string): Observable<{position: string, date: number}> {
     const url = `https://europe.api.riotgames.com/tft/match/v1/matches/${matchId}?api_key=${this.apiKey}`
     return this.http.get(url).pipe(
       map((matchData: any) => {
         const isMatchTypeStandard = matchData.info.tft_game_type === 'standard';
         if (isMatchTypeStandard) {
           const playerMatchData = matchData.info.participants.find((entry: any) => entry.puuid === playerPuuid);
-          return playerMatchData.placement;
-        } else return '';
+          const matchDate = matchData.info.game_datetime;
+          return {position: playerMatchData.placement, date: matchDate};
+        } else return {position: '', date: ''};
       })
     );
   }
