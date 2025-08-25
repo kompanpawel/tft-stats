@@ -1,8 +1,9 @@
 // src/app/services/riot-api.service.ts
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {delay, filter, forkJoin, from, mergeMap, Observable, of, switchMap, take, timer, toArray, zip} from 'rxjs';
+import {filter, forkJoin, from, mergeMap, Observable, of, switchMap, take, timer, toArray, zip} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
+import {environment} from './environments/environment.development';
 
 // Interfejsy danych dla lepszej organizacji i bezpieczeństwa
 export interface PlayerRank {
@@ -29,7 +30,8 @@ interface RiotPlayerConfig {
 export class RiotApiService {
 
   // --- Konfiguracja ---
-  private readonly apiKey = 'RGAPI-6992c2b0-d6bc-4878-bf28-f158c793ac62'; // <-- Wstaw swój klucz API
+
+  private readonly apiKey = environment.apiKey; // <-- Wstaw swój klucz API
   private readonly serverConfig = {
     platform: 'euw1',
     region: 'europe'
@@ -78,7 +80,7 @@ export class RiotApiService {
    * Pobiera dane rangi dla pojedynczego gracza.
    */
   private fetchPlayerRank(player: RiotPlayerConfig): Observable<PlayerRank> {
-    const [gameName, tagLine] = player.name.split('#');
+    const [gameName] = player.name.split('#');
     const leagueUrl = `https://${this.serverConfig.platform}.api.riotgames.com/tft/league/v1/by-puuid/${player.puuid}?api_key=${this.apiKey}`;
     const playerPositions$ = this.fetchPlayerMatches(player.puuid).pipe(
       mergeMap(matchIds => from(matchIds)),
