@@ -1,10 +1,18 @@
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { App } from './app';
+import { RiotApiService } from '../riot-api';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: [
+        {
+          provide: RiotApiService,
+          useValue: { getPlayerRanks: () => of([]) }
+        }
+      ]
     }).compileComponents();
   });
 
@@ -18,6 +26,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, TFTStats');
+    // Root template should render the leaderboard component
+    expect(compiled.querySelector('app-leaderboard')).toBeTruthy();
   });
 });

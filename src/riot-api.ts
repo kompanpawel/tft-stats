@@ -41,7 +41,7 @@ export class RiotApiService {
     {name: 'kompanpawel#21137', puuid: '51VQ8c9vtv0KK2EZdhz1IO3QxhyOmm7qKR1PsatpepWJ04v0IXxXNRYrSr1m3--krno8LRgLG8dPVg'},
     {name: '1 team 5 pajaców#pajac', puuid: 'NCjhgesMYSv1rNIaaEcIDtPhvuk9vLIsmzyDZbx4s8ZydxTTCGR_pzQ5nCaPBl42iE6ggPHaJA8OWA'},
     {name: 'Krecik94#EUW', puuid: 'zo6_0xhaQOMBxJYlmVeOCwzzTGzn09L0GvxIEgasOvcHaxKGyrxkkpWpgFQoct2F_4F6usBE6ReZzQ'},
-    {name: 'exisof#EUW', puuid: 'RQcd9yOloQQpLnG3UrRbgcu6fruPRIxl6b-YbTGZGRJ0uONvJQWRO1glpw_SXzMv2pft1-6Pfe8Uxw'},
+    // {name: 'exisof#EUW', puuid: 'RQcd9yOloQQpLnG3UrRbgcu6fruPRIxl6b-YbTGZGRJ0uONvJQWRO1glpw_SXzMv2pft1-6Pfe8Uxw'},
   ];
 
   // Mapowanie rang dla obliczania wyniku

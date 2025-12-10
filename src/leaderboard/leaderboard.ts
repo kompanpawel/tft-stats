@@ -41,9 +41,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Uruchamia pobieranie danych natychmiast, a następnie co interwał
-    this.updateSubscription = interval(this.updateInterval)
-      .pipe(startWith(0))
-      .subscribe(() => this.fetchRanks());
+    this.fetchRanks()
   }
 
   ngOnDestroy(): void {
