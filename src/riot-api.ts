@@ -1,7 +1,7 @@
 // src/app/services/riot-api.service.ts
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {filter, forkJoin, from, mergeMap, Observable, of, switchMap, take, timer, toArray, zip} from 'rxjs';
+import {filter, forkJoin, from, mergeMap, Observable, of, Subject, switchMap, take, timer, toArray, zip} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 import {environment} from './environments/environment.development';
 
@@ -50,6 +50,44 @@ export class RiotApiService {
 
   constructor(private http: HttpClient) { }
 
+  // --- Globalne ograniczanie tempa (rate limiter) ---
+  // Riot API: max 20 żądań na 1 sekundę. Poniższa kolejka zapewnia wykonanie
+  // maksymalnie 1 żądania co 50 ms (20 req/s) dla całej aplikacji.
+  private readonly rateIntervalMs = 50; // 20 na sekundę
+  private readonly requestQueue$ = new Subject<() => void>();
+
+  // Uruchom przetwarzanie kolejki przy pierwszym wstrzyknięciu serwisu
+  private readonly queueProcessorSub = zip(this.requestQueue$, timer(0, this.rateIntervalMs))
+    .subscribe(([task]) => {
+      try {
+        task();
+      } catch (e) {
+        // Bezpieczny no-op: ewentualne wyjątki są już przekazywane do obserwatora w enqueue
+        // i nie powinny przerwać przetwarzania kolejki.
+      }
+    });
+
+  private enqueue<T>(factory: () => Observable<T>): Observable<T> {
+    return new Observable<T>((observer) => {
+      const task = () => {
+        const sub = factory().subscribe({
+          next: (v) => observer.next(v),
+          error: (err) => observer.error(err),
+          complete: () => observer.complete()
+        });
+        // Zwracamy funkcję czyszczącą subskrypcję, jeśli obserwator anuluje przed rozpoczęciem
+        return () => sub.unsubscribe();
+      };
+
+      // Wstaw zadanie do kolejki; będzie wykonane zgodnie z limitem
+      this.requestQueue$.next(task);
+
+      // Zwróć teardown – w tym prostym wariancie nie mamy możliwości usunąć już
+      // wstawionego zadania z kolejki, ale pozwalamy anulować subskrypcję po rozpoczęciu.
+      return () => { /* no-op */ };
+    });
+  }
+
   /**
    * Pobiera dane o rangach wszystkich graczy.
    * Używa `forkJoin` do równoczesnego wysyłania wielu żądań HTTP.
@@ -96,7 +134,7 @@ export class RiotApiService {
         return newArray
       })
     )
-    const playerRankData$ = this.http.get<any[]>(leagueUrl).pipe(
+    const playerRankData$ = this.enqueue(() => this.http.get<any[]>(leagueUrl)).pipe(
       map(leagueData => {
         const rankedTftEntry = leagueData.find(entry => entry.queueType === 'RANKED_TFT');
         if (rankedTftEntry) {
@@ -144,14 +182,14 @@ export class RiotApiService {
       switchMap(index => {
         const start = index * requestLimit;
         const url = `https://europe.api.riotgames.com/tft/match/v1/matches/by-puuid/${puuid}/ids?start=${start}&count=${requestLimit}&api_key=${this.apiKey}`
-        return this.http.get<any[]>(url);
+        return this.enqueue(() => this.http.get<any[]>(url));
       }
     ));
   }
 
   private fetchPlayerPositionInMatch(matchId: string, playerPuuid: string): Observable<{position: string, date: number}> {
     const url = `https://europe.api.riotgames.com/tft/match/v1/matches/${matchId}?api_key=${this.apiKey}`
-    return this.http.get(url).pipe(
+    return this.enqueue(() => this.http.get(url)).pipe(
       map((matchData: any) => {
         const isMatchTypeStandard = matchData.info.tft_game_type === 'standard';
         if (isMatchTypeStandard) {
