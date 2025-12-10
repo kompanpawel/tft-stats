@@ -1,6 +1,6 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnInit, signal} from '@angular/core';
 import {PlayerRank, RiotApiService} from '../riot-api';
-import {interval, startWith, Subscription} from 'rxjs';
+import {take} from 'rxjs';
 import {DecimalPipe, NgClass, NgForOf, NgIf, TitleCasePipe} from '@angular/common';
 
 @Component({
@@ -15,14 +15,14 @@ import {DecimalPipe, NgClass, NgForOf, NgIf, TitleCasePipe} from '@angular/commo
   templateUrl: './leaderboard.html',
   styleUrl: './leaderboard.css'
 })
-export class LeaderboardComponent implements OnInit, OnDestroy {
+export class LeaderboardComponent implements OnInit {
 
-  public players: PlayerRank[] = [];
-  public loading: boolean = true;
-  public lastUpdated: string = '';
-  public showApiKeyWarning: boolean = false;
+  public players = signal<PlayerRank[]>([]);
+  public loading = signal<boolean>(true);
+  public lastUpdated = signal<string>('');
+  public showApiKeyWarning = signal<boolean>(false);
 
-  private updateSubscription!: Subscription;
+  // Keeping constants as is for potential future auto-refresh via signals
   private readonly updateInterval = 360000; // 1 godzina w milisekundach
 
   private readonly rankColors: any = {
@@ -40,31 +40,29 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   constructor(private riotApiService: RiotApiService) { }
 
   ngOnInit(): void {
-    // Uruchamia pobieranie danych natychmiast, a następnie co interwał
-    this.fetchRanks()
-  }
-
-  ngOnDestroy(): void {
-    // Ważne: usuń subskrypcję, aby zapobiec wyciekom pamięci
-    if (this.updateSubscription) {
-      this.updateSubscription.unsubscribe();
-    }
+    // Uruchamia pobieranie danych natychmiast
+    this.fetchRanks();
   }
 
   public fetchRanks(): void {
-    this.loading = true;
-    this.riotApiService.getPlayerRanks().subscribe({
-      next: (data) => {
-        this.players = data;
-        this.loading = false;
-        this.lastUpdated = new Date().toLocaleString();
-        this.showApiKeyWarning = data.some(p => p.error && p.message === 'API Key is missing.');
-      },
-      error: (err) => {
-        console.error('Failed to fetch leaderboard data:', err);
-        this.loading = false;
-      }
-    });
+    this.loading.set(true);
+    this.riotApiService
+      .getPlayerRanks()
+      .pipe(take(1))
+      .subscribe({
+        next: (data) => {
+          this.players.set(data);
+          this.loading.set(false);
+          this.lastUpdated.set(new Date().toLocaleString());
+          this.showApiKeyWarning.set(
+            data.some(p => p.error && p.message === 'API Key is missing.')
+          );
+        },
+        error: (err) => {
+          console.error('Failed to fetch leaderboard data:', err);
+          this.loading.set(false);
+        }
+      });
   }
 
   public getTierIcon(tier: string | undefined): string {
