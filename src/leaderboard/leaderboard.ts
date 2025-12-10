@@ -1,4 +1,4 @@
-import {Component, OnInit, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, OnInit, signal} from '@angular/core';
 import {PlayerRank, RiotApiService} from '../riot-api';
 import {take} from 'rxjs';
 import {DecimalPipe, NgClass, NgForOf, NgIf, TitleCasePipe} from '@angular/common';
@@ -13,7 +13,8 @@ import {DecimalPipe, NgClass, NgForOf, NgIf, TitleCasePipe} from '@angular/commo
     DecimalPipe
   ],
   templateUrl: './leaderboard.html',
-  styleUrl: './leaderboard.css'
+  styleUrl: './leaderboard.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LeaderboardComponent implements OnInit {
 

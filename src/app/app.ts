@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import {LeaderboardComponent} from '../leaderboard/leaderboard';
 
@@ -6,7 +6,8 @@ import {LeaderboardComponent} from '../leaderboard/leaderboard';
   selector: 'app-root',
   imports: [LeaderboardComponent],
   templateUrl: './app.html',
-  styleUrl: './app.css'
+  styleUrl: './app.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App {
   protected readonly title = signal('TFTStats');
